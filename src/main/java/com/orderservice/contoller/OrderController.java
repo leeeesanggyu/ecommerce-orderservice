@@ -4,12 +4,14 @@ import com.orderservice.domain.OrderReq;
 import com.orderservice.domain.dto.OrderDto;
 import com.orderservice.domain.dto.OrderRes;
 import com.orderservice.domain.entity.OrderEntity;
+import com.orderservice.service.KafkaProducer;
 import com.orderservice.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.boot.Banner;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -22,6 +24,7 @@ public class OrderController {
 
     private final OrderService orderService;
     private final ModelMapper modelMapper;
+    private final KafkaProducer kafkaProducer;
 
     @PostMapping(value = "/{userId}/order")
     public ResponseEntity<OrderRes> createOrder(
@@ -32,6 +35,8 @@ public class OrderController {
         orderDto.setUserId(userId);
         final OrderDto result = orderService.createOrder(orderDto);
         final OrderRes orderRes = modelMapper.map(result, OrderRes.class);
+
+        kafkaProducer.send("order-topic", orderDto);
         return ResponseEntity.status(HttpStatus.CREATED).body(orderRes);
     }
 
