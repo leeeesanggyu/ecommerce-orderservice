@@ -4,18 +4,18 @@ import com.orderservice.domain.OrderReq;
 import com.orderservice.domain.dto.OrderDto;
 import com.orderservice.domain.dto.OrderRes;
 import com.orderservice.domain.entity.OrderEntity;
-import com.orderservice.service.KafkaProducer;
+import com.orderservice.service.producer.KafkaProducer;
 import com.orderservice.service.OrderService;
+import com.orderservice.service.producer.OrderProducer;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
-import org.springframework.boot.Banner;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequiredArgsConstructor
@@ -25,6 +25,7 @@ public class OrderController {
     private final OrderService orderService;
     private final ModelMapper modelMapper;
     private final KafkaProducer kafkaProducer;
+    private final OrderProducer orderProducer;
 
     @PostMapping(value = "/{userId}/order")
     public ResponseEntity<OrderRes> createOrder(
@@ -33,11 +34,19 @@ public class OrderController {
     ) {
         final OrderDto orderDto = modelMapper.map(orderReq, OrderDto.class);
         orderDto.setUserId(userId);
-        final OrderDto result = orderService.createOrder(orderDto);
-        final OrderRes orderRes = modelMapper.map(result, OrderRes.class);
+
+        /* jpa */
+//        final OrderDto result = orderService.createOrder(orderDto);
+//        final OrderRes orderRes = modelMapper.map(result, OrderRes.class);
+
+        /* kafka */
+        orderDto.setOrderId(UUID.randomUUID().toString());
+        orderDto.setTotalPrice(orderDto.getQty() * orderDto.getUnitPrice());
 
         kafkaProducer.send("order-topic", orderDto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(orderRes);
+        orderProducer.send("orders", orderDto);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(modelMapper.map(orderDto, OrderRes.class));
     }
 
     @GetMapping(value = "/{userId}/order")
