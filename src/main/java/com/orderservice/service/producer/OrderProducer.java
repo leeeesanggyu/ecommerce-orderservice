@@ -34,7 +34,7 @@ public class OrderProducer {
 
     Schema schema = Schema.builder()
             .type("struct")
-            .field(fieldList)
+            .fields(fieldList)
             .optional(false)
             .name("orders")
             .build();
