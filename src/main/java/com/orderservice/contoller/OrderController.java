@@ -8,6 +8,7 @@ import com.orderservice.service.producer.KafkaProducer;
 import com.orderservice.service.OrderService;
 import com.orderservice.service.producer.OrderProducer;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/order-service")
@@ -43,7 +45,7 @@ public class OrderController {
         orderDto.setOrderId(UUID.randomUUID().toString());
         orderDto.setTotalPrice(orderDto.getQty() * orderDto.getUnitPrice());
 
-        kafkaProducer.send("order-topic", orderDto);
+        kafkaProducer.send("order-topic", orderDto); // to catalog microservice
         orderProducer.send("orders", orderDto);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(modelMapper.map(orderDto, OrderRes.class));
@@ -51,10 +53,13 @@ public class OrderController {
 
     @GetMapping(value = "/{userId}/order")
     public ResponseEntity<List<OrderRes>> getUserOrder(@PathVariable("userId") String userId) {
+        log.info("Before retrieve orders data");
         final Iterable<OrderEntity> orderList = orderService.getOrderByUserId(userId);
 
         final ArrayList<OrderRes> orderResList = new ArrayList<>();
         orderList.forEach(o -> orderResList.add(modelMapper.map(o, OrderRes.class)));
+
+        log.info("After retrieved orders data");
         return ResponseEntity.status(HttpStatus.OK).body(orderResList);
     }
 }
