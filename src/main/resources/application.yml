@@ -38,3 +38,10 @@ eureka:
 logging:
   level:
     com.catalogservice: DEBUG
+
+# Spring Boot Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, httptrace, info, prometheus, metrics
